@@ -1,0 +1,45 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [12, 14, 16]
+
+    steps:
+    - name: Setup PostgreSQL
+      uses: Harmon758/postgresql-action@v1.0.0
+      with:
+        postgresql db: test
+        postgresql user: test
+        postgresql password: test
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ matrix.node-version }}
+    - shell: bash
+      env:
+        NPM_TOKEN: ${{secrets.npm_token}}
+      run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > ~/.npmrc && echo 'registry "https://registry.npmjs.org"' >> ~/.yarnrc
+    - run: yarn install --frozen-lockfile
+      env:
+        NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+    - run: npm test
+      env:
+        POSTGRES_TEST_HOST: localhost
+        POSTGRES_TEST_DATABASE: test
+        POSTGRES_TEST_USERNAME: test
+        POSTGRES_TEST_PASSWORD: test
